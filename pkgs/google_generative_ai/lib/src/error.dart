@@ -42,6 +42,19 @@ final class UnsupportedUserLocation implements GenerativeAIException {
   String get message => _message;
 }
 
+/// Exception thrown when the quota is exceeded.
+final class QuotaExceeded implements GenerativeAIException {
+  // ignore: public_member_api_docs
+  QuotaExceeded(this.message, this.details);
+  @override
+  final String message;
+
+  final dynamic details;
+
+  @override
+  String toString() => message;
+}
+
 /// Exception thrown when the server failed to generate content.
 final class ServerException implements GenerativeAIException {
   @override
@@ -80,6 +93,9 @@ GenerativeAIException parseError(Object jsonObject) {
     } =>
       InvalidApiKey(message),
     {'message': UnsupportedUserLocation._message} => UnsupportedUserLocation(),
+    {'message': final String message, 'details': final dynamic details}
+        when message.toLowerCase().contains('quota') =>
+      QuotaExceeded(message, details),
     {'message': final String message} => ServerException(message),
     _ => throw unhandledFormat('server error', jsonObject)
   };
