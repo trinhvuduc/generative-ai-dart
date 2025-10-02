@@ -15,10 +15,12 @@
 /// Exception thrown when generating content fails.
 ///
 /// The [message] may explain the cause of the failure.
+/// The [code] contains the error code when available.
 final class GenerativeAIException implements Exception {
   final String message;
+  final int? code;
 
-  GenerativeAIException(this.message);
+  GenerativeAIException(this.message, {this.code});
 
   @override
   String toString() => 'GenerativeAIException: $message';
@@ -28,8 +30,10 @@ final class GenerativeAIException implements Exception {
 final class InvalidApiKey implements GenerativeAIException {
   @override
   final String message;
+  @override
+  final int? code;
 
-  InvalidApiKey(this.message);
+  InvalidApiKey(this.message, {this.code});
 
   @override
   String toString() => message;
@@ -40,14 +44,20 @@ final class UnsupportedUserLocation implements GenerativeAIException {
   static const _message = 'User location is not supported for the API use.';
   @override
   String get message => _message;
+  @override
+  final int? code;
+
+  UnsupportedUserLocation({this.code});
 }
 
 /// Exception thrown when the quota is exceeded.
 final class QuotaExceeded implements GenerativeAIException {
   // ignore: public_member_api_docs
-  QuotaExceeded(this.message, this.details);
+  QuotaExceeded(this.message, this.details, {this.code});
   @override
   final String message;
+  @override
+  final int? code;
 
   final dynamic details;
 
@@ -59,8 +69,10 @@ final class QuotaExceeded implements GenerativeAIException {
 final class ServerException implements GenerativeAIException {
   @override
   final String message;
+  @override
+  final int? code;
 
-  ServerException(this.message);
+  ServerException(this.message, {this.code});
 
   @override
   String toString() => message;
@@ -77,7 +89,8 @@ final class GenerativeAISdkException implements Exception {
   GenerativeAISdkException(this.message);
 
   @override
-  String toString() => '$message\n'
+  String toString() =>
+      '$message\n'
       'This indicates a problem with the Google Generative AI SDK. '
       'Try updating to the latest version '
       '(https://pub.dev/packages/google_generative_ai/versions), '
@@ -88,15 +101,22 @@ final class GenerativeAISdkException implements Exception {
 GenerativeAIException parseError(Object jsonObject) {
   return switch (jsonObject) {
     {
+      'code': final int? code,
       'message': final String message,
-      'details': [{'reason': 'API_KEY_INVALID'}, ...]
+      'details': [{'reason': 'API_KEY_INVALID'}, ...],
     } =>
-      InvalidApiKey(message),
-    {'message': UnsupportedUserLocation._message} => UnsupportedUserLocation(),
-    {'message': final String message, 'details': final dynamic details}
+      InvalidApiKey(message, code: code),
+    {'message': UnsupportedUserLocation._message, 'code': final int? code} =>
+      UnsupportedUserLocation(code: code),
+    {
+      'code': final int? code,
+      'message': final String message,
+      'details': final dynamic details,
+    }
         when message.toLowerCase().contains('quota') =>
-      QuotaExceeded(message, details),
-    {'message': final String message} => ServerException(message),
+      QuotaExceeded(message, details, code: code),
+    {'message': final String message, 'code': final int? code} =>
+      ServerException(message, code: code),
     _ => throw unhandledFormat('server error', jsonObject)
   };
 }
